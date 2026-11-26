@@ -9,11 +9,13 @@ const requeridas = {
   registrarventa: ['idcliente', 'sku', 'descripcion', 'monto'],
   cambiarmonto: ['idcliente', 'sku', 'nuevomonto'],
   hacerdevolucion: ['idcliente', 'sku'],
+  eliminarcliente: ['idcliente'],
 };
 const tiposArgumentos = {
   crearregistro: ['string'], crearcliente: ['string'],
   registrarventa: ['u16', 'string', 'string', 'u32'],
   cambiarmonto: ['u16', 'string', 'u32'], hacerdevolucion: ['u16', 'string'],
+  eliminarcliente: ['u16'],
 };
 const camposEsperados = {
   registro: [['owner', 'pubkey'], ['nombrenegocio', 'string'], ['clientes', 'vec:pubkey'], ['idcounter', 'u16']],

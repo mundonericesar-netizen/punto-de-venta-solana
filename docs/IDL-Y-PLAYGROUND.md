@@ -17,6 +17,7 @@ El IDL incluido procede del material de referencia de David y utiliza la direcci
 | `registrar_venta` | ID: `u16`, SKU: `String`, descripción: `String`, monto: `u32` |
 | `cambiar_monto` | ID: `u16`, SKU: `String`, nuevo monto: `u32` |
 | `hacer_devolucion` | ID: `u16`, SKU: `String` |
+| `eliminar_cliente` | ID: `u16` |
 
 Las cuentas son Registro (autoridad, nombre, direcciones de clientes y contador), Cliente (ID, nombre, compras y direcciones de ventas) y Venta (SKU, descripción y monto). El comando de importación comprueba nombres, orden y tipos de argumentos y campos. La compatibilidad con el despliegue real se verifica después con transacciones: esta validación no reemplaza esa prueba.
 

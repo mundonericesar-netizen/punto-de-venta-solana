@@ -2,8 +2,9 @@
 import { PublicKey } from "@solana/web3.js";
 
 ////////////////// Constantes ////////////////////
-const nombre_negocio = "Abarrotes Tsting"; // Nombre del punto de venta
+const nombre_negocio = "Tienda Demo"; // Nombre del punto de venta
 const owner = pg.wallet.publicKey; // Wallet
+const opciones = { commitment: "confirmed", preflightCommitment: "confirmed" } as const;
 
 //////////////////// Client Test Logs ////////////////////
 console.log("My address:", owner.toString()); // Ver el address
@@ -96,7 +97,7 @@ no para mandarlo, sino para calcular la direccion que va en la transaccion.
 */
 async function siguienteId(nombre_negocio) {
   const [pda_registro] = pdaRegistro(nombre_negocio);
-  const registroAccount = await pg.program.account.registro.fetch(pda_registro);
+  const registroAccount = await pg.program.account.registro.fetch(pda_registro, "confirmed");
   return registroAccount.idCounter + 1; // En el IDL id_counter pasa a idCounter
 }
 
@@ -110,7 +111,7 @@ async function crearRegistro(nombre_negocio) {
       owner: owner,
       registro: pda_registro,
     })
-    .rpc();
+    .rpc(opciones);
 
   console.log("txHash: ", txHash);
 }
@@ -129,7 +130,7 @@ async function crearCliente(nombre_negocio, nombre) {
       registro: registro,
       cliente: cliente,
     })
-    .rpc();
+    .rpc(opciones);
 
   console.log("txHash: ", txHash);
   console.log(`Cliente ${nombre} creado con id:`, id_cliente);
@@ -159,7 +160,7 @@ async function registrarVenta(
       cliente: cliente,
       venta: venta,
     })
-    .rpc();
+    .rpc(opciones);
 
   console.log("txHash: ", txHash);
 }
@@ -177,7 +178,7 @@ async function hacerDevolucion(nombre_negocio, id_cliente, sku) {
       cliente: cliente,
       venta: venta,
     })
-    .rpc();
+    .rpc(opciones);
 
   console.log("txHash: ", txHash);
 }
@@ -196,9 +197,18 @@ async function cambiarMonto(nombre_negocio, id_cliente, sku, nuevo_monto) {
       cliente: cliente,
       venta: venta,
     })
-    .rpc();
+    .rpc(opciones);
 
   console.log("txHash: ", txHash);
+}
+
+async function eliminarCliente(nombre_negocio, id_cliente) {
+  const { registro, cliente } = cadena(nombre_negocio, id_cliente, "");
+  const tx = await pg.program.methods
+    .eliminarCliente(id_cliente)
+    .accounts({ owner, registro, cliente })
+    .rpc(opciones);
+  console.log("Cliente eliminado:", tx);
 }
 
 //////////////////// Ver Clientes ////////////////////
@@ -218,7 +228,7 @@ async function verClientes(nombre_negocio) {
 
   try {
     const registroAccount = await pg.program.account.registro.fetch(
-      pda_registro
+      pda_registro, "confirmed"
     );
 
     console.log("Negocio:", registroAccount.nombreNegocio);
@@ -235,7 +245,7 @@ async function verClientes(nombre_negocio) {
 
     for (let i = 0; i < numero_clientes; i++) {
       const clienteKey = registroAccount.clientes[i];
-      const clienteAccount = await pg.program.account.cliente.fetch(clienteKey);
+      const clienteAccount = await pg.program.account.cliente.fetch(clienteKey, "confirmed");
 
       console.log(
         `\nCliente #${i + 1}: ${clienteAccount.nombre} \n * Id: ${
@@ -247,7 +257,7 @@ async function verClientes(nombre_negocio) {
 
       for (let j = 0; j < clienteAccount.historial.length; j++) {
         const ventaKey = clienteAccount.historial[j];
-        const ventaAccount = await pg.program.account.venta.fetch(ventaKey);
+        const ventaAccount = await pg.program.account.venta.fetch(ventaKey, "confirmed");
 
         console.log(
           `   Venta #${j + 1}: SKU ${ventaAccount.sku} | ${
@@ -280,11 +290,12 @@ async function clienteNuevoConVenta(
   console.log("Alta completa para el cliente con id:", id_cliente);
 }
 
-crearRegistro(nombre_negocio);
-// clienteNuevoConVenta(nombre_negocio, "Isaac K", "Sabritas", "No puedes comer solo una", 30);
-// registrarVenta(nombre_negocio, 1, "Coca", "Coca de sabor pineapple", 18);
-// cambiarMonto(nombre_negocio, 1, "Sabritas", 32);
-// hacerDevolucion(nombre_negocio, 1, "Coca");
-// verClientes(nombre_negocio);
+// await crearRegistro(nombre_negocio);
+// await crearCliente(nombre_negocio, "Cliente Demo");
+// await registrarVenta(nombre_negocio, 1, "A001", "Producto", 100);
+// await cambiarMonto(nombre_negocio, 1, "A001", 150);
+// await hacerDevolucion(nombre_negocio, 1, "A001");
+// await eliminarCliente(nombre_negocio, 1);
+// await verClientes(nombre_negocio);
 
 // solana confirm -v <txHash>

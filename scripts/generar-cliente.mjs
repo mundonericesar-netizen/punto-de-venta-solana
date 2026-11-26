@@ -1,7 +1,9 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { createFromRoot } from 'codama';
+import { rootNodeFromAnchor } from '@codama/nodes-from-anchor';
+import { renderVisitor } from '@codama/renderers-js';
 import { validarIdl, prepararIdl, huellaIdl } from './contrato-idl.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,12 +20,10 @@ try {
   );
   datos.esReferencia = datos.esReferencia && !importado;
   await mkdir(resolve(root, '.aula'), { recursive: true });
-  await writeFile(resolve(root, '.aula/idl-codama.json'), JSON.stringify(prepararIdl(idl, datos.programId), null, 2) + '\n');
-  const paqueteRuta = resolve(root, 'node_modules/codama/package.json');
-  const paquete = JSON.parse(await readFile(paqueteRuta, 'utf8'));
-  const bin = typeof paquete.bin === 'string' ? paquete.bin : paquete.bin.codama;
-  const resultado = spawnSync(process.execPath, [resolve(dirname(paqueteRuta), bin), 'run', 'js'], { cwd: root, stdio: 'inherit' });
-  if (resultado.status !== 0) throw new Error('Codama no pudo generar el cliente. Revisa la salida anterior.');
+  const idlPreparado = prepararIdl(idl, datos.programId);
+  await writeFile(resolve(root, '.aula/idl-codama.json'), JSON.stringify(idlPreparado, null, 2) + '\n');
+  const codama = createFromRoot(rootNodeFromAnchor(idlPreparado));
+  await codama.accept(renderVisitor(resolve(root, 'clients/js')));
   // El cliente vive dentro de este proyecto ESM y se consume como TypeScript.
   // Codama crea otro package.json: fijamos su modo para Vite y Node/tsx.
   const clienteRuta = resolve(root, 'clients/js/package.json');

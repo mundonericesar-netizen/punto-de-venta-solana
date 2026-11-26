@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("");
+declare_id!("Dg1cxWyD4NG4tAzSF3UVWErYtQBni4US66byhbJ8Coer");
 
 #[program]
 pub mod registro {
@@ -57,6 +57,7 @@ pub mod registro {
         descripcion: String,
         monto: u32,
     ) -> Result<()> {
+        require!(monto > 0, Errores::MontoInvalido);
         context.accounts.venta.set_inner(Venta {
             sku,
             descripcion,
@@ -97,11 +98,7 @@ pub mod registro {
         cliente.historial.retain(|&k| k != venta_key); // Quita la referencia del historial
         cliente.compras -= 1;
 
-        msg!(
-            "Venta con sku: {}, devuelta por el cliente con id: {}",
-            sku,
-            cliente.id_cliente
-        );
+        msg!("Venta con SKU {} devuelta exitosamente", sku);
 
         Ok(())
     }
@@ -115,17 +112,28 @@ pub mod registro {
         sku: String,
         nuevo_monto: u32,
     ) -> Result<()> {
+        require!(nuevo_monto > 0, Errores::MontoInvalido);
         let venta = &mut context.accounts.venta;
         let viejo_monto = venta.monto;
         venta.monto = nuevo_monto;
 
         msg!(
-            "El monto de la venta con sku: {}, paso de: {}, a: {}",
+            "Venta {} modificada de {} a {}",
             sku,
             viejo_monto,
             nuevo_monto
         );
 
+        Ok(())
+    }
+
+    pub fn eliminar_cliente(context: Context<EliminarCliente>, id_cliente: u16) -> Result<()> {
+        let cliente = &context.accounts.cliente;
+        require!(cliente.historial.is_empty() && cliente.compras == 0, Errores::VentasActivas);
+        let cliente_key = cliente.key();
+        let registro = &mut context.accounts.registro;
+        registro.clientes.retain(|&k| k != cliente_key);
+        msg!("Cliente {} eliminado exitosamente", id_cliente);
         Ok(())
     }
 }
@@ -137,6 +145,10 @@ pub enum Errores {
     NoOwner,
     #[msg("Error, la venta no esta en el historial del cliente")]
     NoSKU,
+    #[msg("El monto debe ser mayor que cero")]
+    MontoInvalido,
+    #[msg("El cliente tiene ventas activas")]
+    VentasActivas,
 }
 
 /////////////////////////// CUENTAS ///////////////////////////
@@ -331,4 +343,22 @@ pub struct EliminarVenta<'info> {
         bump
     )]
     pub venta: Account<'info, Venta>,
+}
+
+#[derive(Accounts)]
+#[instruction(id_cliente: u16)]
+pub struct EliminarCliente<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(mut, has_one = owner @ Errores::NoOwner)]
+    pub registro: Account<'info, Registro>,
+
+    #[account(
+        mut,
+        close = owner,
+        seeds = [b"cliente", registro.key().as_ref(), id_cliente.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub cliente: Account<'info, Cliente>,
 }

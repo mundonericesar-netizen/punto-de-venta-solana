@@ -1,12 +1,33 @@
-# Registro de Ventas · App
+# Punto de venta en Solana — Proyecto final
 
 ![Registro de Ventas · App — Solana, TypeScript y React](./images/banner-app.png)
 
-Frontend educativo desarrollado con **TypeScript y React** para interactuar con el programa [Registro de Ventas con PDAs](https://github.com/WayLearnLatam/Registro-Ventas-Solana-PDA) en **Solana Devnet**.
+Proyecto educativo de registro de ventas que integra un programa **Rust + Anchor**, cuentas PDA y una aplicación **TypeScript + React** utilizando el cliente generado con Codama en **Solana Devnet**.
 
-Forma parte del **Solana Engineering Track: Advanced** de WayLearn. Aquí conectamos lo aprendido sobre cuentas, instrucciones y PDAs con una aplicación que se utiliza desde el navegador.
+**Ruta de entrega:** Guiada · Solana Engineering Track: Advanced (WayLearn). El objetivo es ampliar el programa de registro de ventas y demostrar el flujo entre el programa desplegado y el frontend.
 
-Puedes comenzar haciendo **Fork** de este repositorio. Hemos preparado un entorno de **GitHub Codespaces** para que puedas concentrarte en los ejercicios sin instalar las herramientas del frontend en tu computadora. 🚀
+**Program ID:** `Dg1cxWyD4NG4tAzSF3UVWErYtQBni4US66byhbJ8Coer`
+
+**Red:** Devnet · [Ver programa en Solana Explorer](https://explorer.solana.com/address/Dg1cxWyD4NG4tAzSF3UVWErYtQBni4US66byhbJ8Coer?cluster=devnet).
+
+## Aporte funcional
+
+- Se impide registrar o cambiar el importe de una venta a cero (`MontoInvalido`).
+- Se incorpora `eliminar_cliente`: solo la autoridad puede dar de baja al cliente y únicamente si no tiene ventas activas ni historial (`VentasActivas`). Se elimina su referencia del registro y se cierra su cuenta sin reutilizar su ID.
+- El IDL exportado, el cliente Codama y el frontend están sincronizados con el despliegue. La interfaz ofrece una operación **Eliminar cliente** que utiliza el constructor generado y actualiza la consulta tras confirmarse la operación.
+- La generación del cliente utiliza la API de Codama directamente, evitando el error de rutas absolutas de la CLI en Windows.
+
+## Resultados de verificación
+
+| Verificación | Resultado |
+| --- | --- |
+| Build y despliegue en Solana Playground | Exitoso en Devnet |
+| Pruebas del programa en Playground | 9 aprobadas, 0 fallidas (incluye monto cero, baja rechazada y baja válida) |
+| Verificación local del frontend | 10 aprobadas, 0 fallidas; TypeScript y Vite compilan |
+| Lectura desde el frontend del registro `Tienda Demo` | Comprobada en Devnet |
+| Baja de cliente desde el frontend, con firma de práctica | Implementada y cubierta por la prueba local del constructor; falta la comprobación manual de firma desde el navegador |
+
+**Evidencia verificable:** [Creación del registro Tienda Demo — transacción confirmada en Devnet](https://explorer.solana.com/tx/37BcQaYZgx1ZiW4XGwqDRQfcgMjbS4LZ7Kt2K4sUc1DJqE3qYSJ1L24W3WV3J9GsLavi4tvKgpFVAzacvhpXSqah?cluster=devnet). La transacción ejecutó `CrearRegistro` con resultado exitoso en el Program ID de este proyecto.
 
 > 📖 Sigue las explicaciones y actividades en el [GitBook de Advanced](https://waylearn.gitbook.io/solana-engineering-track-advanced).
 
@@ -16,6 +37,7 @@ Puedes comenzar haciendo **Fork** de este repositorio. Hemos preparado un entorn
 - Consultar un registro de ventas, sus clientes y las ventas activas de cada uno.
 - Crear un negocio y dar de alta a sus clientes.
 - Registrar ventas, corregir su importe y realizar devoluciones.
+- Dar de baja clientes sin ventas activas.
 - Revisar solicitudes de firma, confirmaciones y errores de las transacciones.
 
 El recorrido del proyecto sigue esta relación:
@@ -64,19 +86,23 @@ Abre la aplicación en una pestaña normal del navegador donde tienes instalada 
 
 ## Ejecutar en tu computadora
 
-Si prefieres trabajar en local, utiliza **Node.js 22.12 o superior de la rama 22** y npm. Clona tu fork o utiliza directamente el repositorio original:
+Si prefieres trabajar en local, utiliza **Node.js 22.12 o superior compatible (22–24)** y npm. Clona este repositorio:
 
 ```bash
-git clone https://github.com/WayLearnLatam/Registro-Ventas-Solana-App.git
-cd Registro-Ventas-Solana-App
+git clone https://github.com/mundonericesar-netizen/punto-de-venta-solana.git
+cd punto-de-venta-solana
 npm ci
-npm run cliente
+npm run verificar
 npm run dev
 ```
 
 Abre `http://localhost:5173` en el navegador con tu wallet instalada.
 
-En Windows puedes ejecutar estos comandos desde WSL. El repositorio también incluye una configuración de Dev Container para VS Code, si ya utilizas Docker y la extensión Dev Containers.
+En PowerShell de Windows puedes usar `npm.cmd ci`, `npm.cmd run verificar` y `npm.cmd run dev`. Si npm informa que el lockfile no coincide, ejecuta `npm.cmd install`. El IDL y el cliente generado se incluyen en el repositorio, por lo que no necesitas volver a desplegar ni regenerar para empezar. El repositorio también incluye una configuración de Dev Container para VS Code.
+
+### Cómo probar el aporte
+
+En un registro de práctica del que seas autoridad en Devnet, crea un cliente y registra una venta con importe positivo. Selecciona **Eliminar cliente** e indica su ID: el programa debe rechazar la baja con `VentasActivas`. Realiza la devolución de esa venta y repite la baja: al confirmarse, el cliente debe desaparecer del listado, sin reducir el último ID asignado. Comprueba también que no se permiten importes iguales a cero. No se utilizan fondos reales ni datos de compradores reales.
 
 ## Conectar el programa de Solana
 
@@ -124,7 +150,7 @@ El proyecto utiliza el mismo frontend durante ambos días. Puedes elegir el punt
 | --- | --- |
 | `npm run clase:dia3` | Pantalla de conexión para explorar wallet, RPC, saldos e IDL. Reserva Registro para el día siguiente. |
 | `npm run clase:dia4` | Pantalla del registro con dos funciones por completar: `crearCliente` y `registrarVenta`. |
-| `npm run clase:resuelto` | Las cinco operaciones implementadas, como referencia para estudiar y contrastar. |
+| `npm run clase:resuelto` | Las seis operaciones implementadas, como referencia para estudiar y contrastar. |
 
 Detén `npm run dev` antes de cambiar de modo y vuelve a iniciarlo al terminar.
 
@@ -141,6 +167,9 @@ Detén `npm run dev` antes de cambiar de modo y vuelve a iniciarlo al terminar.
 | `src/solana/tx.ts` | Preparación, envío, confirmación y errores de las transacciones. |
 | `src/config/interfaz.ts` | Título y valores iniciales para personalizar la demo. |
 | `idl.json` | IDL utilizado para generar el cliente del programa. |
+| `programa/src/lib.rs` | Programa Anchor con el aporte funcional y el Program ID de Devnet. |
+| `programa/client/client.ts` | Cliente de Solana Playground. |
+| `programa/tests/anchor.test.ts` | Las nueve pruebas del programa para Playground. |
 | `clients/js/src/generated/` | Código generado con Codama; no se modifica a mano. |
 | `materiales/` | Versión de ejercicio y solución de las operaciones. |
 | `docs/` | Guías de configuración, pruebas y alcance del ejemplo. |
@@ -169,6 +198,8 @@ Para tu primera prueba, crea un negocio, agrega un cliente, registra una venta y
 | Cambiaste el IDL y falla la comprobación | Ejecuta `npm run cliente` y reinicia el servidor. |
 
 ## Recursos y comunidad
+
+El proyecto parte de los repositorios educativos originales de WayLearn: [Registro-Ventas-Solana-App](https://github.com/WayLearnLatam/Registro-Ventas-Solana-App) y [Registro-Ventas-Solana-PDA](https://github.com/WayLearnLatam/Registro-Ventas-Solana-PDA), con las modificaciones y el despliegue descritos arriba.
 
 - [GitBook de Solana Engineering Track: Advanced](https://waylearn.gitbook.io/solana-engineering-track-advanced).
 - [Programa Registro de Ventas con PDAs](https://github.com/WayLearnLatam/Registro-Ventas-Solana-PDA).

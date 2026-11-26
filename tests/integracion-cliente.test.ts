@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
 import type { Connection } from '@solana/web3.js';
 import { address, createNoopSigner } from '@solana/kit';
-import { getRegistrarVentaInstruction, getRegistrarVentaInstructionDataDecoder, getCambiarMontoInstruction, REGISTRO_PROGRAM_ADDRESS } from '../clients/js/src/generated';
+import { getRegistrarVentaInstruction, getRegistrarVentaInstructionDataDecoder, getCambiarMontoInstruction, getEliminarClienteInstruction, getEliminarClienteInstructionDataDecoder, REGISTRO_PROGRAM_ADDRESS } from '../clients/js/src/generated';
 import { pdaRegistro, pdaCliente, pdaVenta } from '../src/solana/pdas';
 import { s } from '../src/solana/seeds';
 import { aWeb3, confirmarEnvio, ErrorTransaccion, ErrorConfirmacionPendiente, traducir } from '../src/solana/tx';
@@ -48,6 +48,16 @@ test('Codama serializa la instruccion y el puente conserva datos, orden y roles'
   const correccion = aWeb3(getCambiarMontoInstruction({ owner: createNoopSigner(owner), registro, cliente, venta, idCliente: 1, sku: 'CAF01', nuevoMonto: 55 }));
   assert.equal(correccion.keys[0].isSigner, true);
   assert.equal(correccion.keys[0].isWritable, false);
+});
+
+test('eliminar cliente serializa el ID, las cuentas, la autoridad y los errores de Rust', () => {
+  const registro = pdaRegistro('Tienda Demo', owner), cliente = pdaCliente(registro, 1);
+  const ix = getEliminarClienteInstruction({ owner: createNoopSigner(owner), registro, cliente, idCliente: 1 });
+  assert.deepEqual(Buffer.from(ix.data.subarray(0, 8)), createHash('sha256').update('global:eliminar_cliente').digest().subarray(0, 8));
+  assert.equal(getEliminarClienteInstructionDataDecoder().decode(ix.data).idCliente, 1);
+  assert.deepEqual(aWeb3(ix).keys.map((cuenta) => [cuenta.pubkey.toBase58(), cuenta.isSigner, cuenta.isWritable]), [[owner, true, true], [registro, false, true], [cliente, false, true]]);
+  assert.match(traducir(new Error('custom program error: 0x1772')), /MontoInvalido/);
+  assert.match(traducir(new Error('custom program error: 0x1773')), /VentasActivas/);
 });
 
 test('una confirmacion con error nunca produce un resultado de exito', async () => {
